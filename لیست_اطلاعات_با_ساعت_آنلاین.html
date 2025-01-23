@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لیست اطلاعات راننده و مالک</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .logo-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .logo {
+            width: 150px;
+            height: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 18px;
+            text-align: center;
+            background: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        table thead tr {
+            background-color: #4CAF50;
+            color: white;
+        }
+        table th, table td {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+        }
+        table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        table tbody tr:hover {
+            background-color: #f1f1f1;
+            cursor: pointer;
+        }
+        .actions {
+            text-align: center;
+            margin: 20px 0;
+        }
+        button, input[type="file"], input[type="text"] {
+            padding: 10px 20px;
+            font-size: 16px;
+            color: black;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 5px;
+        }
+        input[type="text"] {
+            width: 300px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script>
+        function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+                populateTable(jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function populateTable(data) {
+            const tableBody = document.querySelector("#infoTable tbody");
+            tableBody.innerHTML = ""; // پاک کردن داده‌های قبلی
+
+            data.forEach((row, index) => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td contenteditable="true">${index + 1}</td>
+                    <td contenteditable="true">${row['نام و نام خانوادگی راننده'] || ""}</td>
+                    <td contenteditable="true">${row['کد ملی راننده'] || ""}</td>
+                    <td contenteditable="true">${row['تاریخ تولد راننده'] || ""}</td>
+                    <td contenteditable="true">${row['موبایل راننده'] || ""}</td>
+                    <td contenteditable="true">${row['نام و نام خانوادگی مالک'] || ""}</td>
+                    <td contenteditable="true">${row['کد ملی مالک'] || ""}</td>
+                    <td contenteditable="true">${row['موبایل مالک'] || ""}</td>
+                    <td contenteditable="true">${row['شماره پلاک'] || ""}</td>
+                    <td contenteditable="true"></td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            saveChanges();
+        }
+
+        function clearTable() {
+            document.querySelector("#infoTable tbody").innerHTML = "";
+        }
+
+        function searchTable() {
+            const input = document.getElementById("searchInput").value.toLowerCase();
+            const rows = document.querySelectorAll("#infoTable tbody tr");
+            rows.forEach(row => {
+                const cells = row.querySelectorAll("td");
+                const match = Array.from(cells).some(cell => cell.textContent.toLowerCase().includes(input));
+                row.style.display = match ? "" : "none";
+            });
+        }
+
+        function saveChanges() {
+            const table = document.querySelector("#infoTable");
+            const rows = table.querySelectorAll("tbody tr");
+            const data = [];
+            rows.forEach(row => {
+                const cells = row.querySelectorAll("td");
+                const rowData = Array.from(cells).map(cell => cell.textContent.trim());
+                data.push(rowData);
+            });
+
+            localStorage.setItem("tableData", JSON.stringify(data));
+        }
+
+        function loadSavedData() {
+            const savedData = localStorage.getItem("tableData");
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                const tableBody = document.querySelector("#infoTable tbody");
+                tableBody.innerHTML = "";
+                data.forEach((rowData, index) => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = rowData.map(cell => `<td contenteditable="true">${cell}</td>`).join("");
+                    tableBody.appendChild(tr);
+                });
+            }
+        }
+
+        function changeLogo(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    document.querySelector(".logo").src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", loadSavedData);
+    </script>
+</head>
+<body>
+    <div class="logo-container">
+        <img src="logo.png" alt="لوگو شرکت" class="logo">
+        <input type="file" onchange="changeLogo(event)" accept="image/*">
+    </div>
+    <h1 style="text-align: center;">لیست اطلاعات راننده و مالک</h1>
+    <div class="actions">
+        <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="جستجو در جدول...">
+        <input type="file" id="excelFile" accept=".xlsx, .xls" onchange="handleFile(event)">
+        <button onclick="clearTable()">پاک کردن جدول</button>
+    </div>
+    <table id="infoTable">
+        <thead>
+            <tr>
+                <th>کد مشتری</th>
+                <th>نام و نام خانوادگی راننده</th>
+                <th>کد ملی راننده</th>
+                <th>تاریخ تولد راننده</th>
+                <th>موبایل راننده</th>
+                <th>نام و نام خانوادگی مالک</th>
+                <th>کد ملی مالک</th>
+                <th>موبایل مالک</th>
+                <th>شماره پلاک</th>
+                <th>تاریخ و ساعت ثبت</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</body>
+</html><script>
+    function saveChanges() 
